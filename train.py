@@ -73,7 +73,7 @@ def train(
                         if isinstance(m, mm.Loss):
                             m.add(loss.cpu().item(), batch_x.size(0))
                         else:
-                            m.add(logit, batch_y)
+                            m.add(logit.squeeze(), batch_y)
 
             for m in metrics:
                 history[m.__class__.__name__+'_'+phase].append(m.value())
@@ -115,7 +115,7 @@ def evaluate(
                 if isinstance(m, mm.Loss):
                     m.add(loss.cpu().item(), batch_x.size(0))
                 else:
-                    m.add(logit, batch_y)
+                    m.add(logit.squeeze(), batch_y)
     for m in metrics:
         history[m.__class__.__name__] = m.value()
     print(
