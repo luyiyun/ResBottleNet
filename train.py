@@ -175,7 +175,8 @@ def main():
             inpt_shape, out_shape, config.args.hidden_num,
             config.args.bottle_num, config.args.block_num,
             config.args.no_res, config.act, config.args.no_head,
-            config.args.no_bottle, config.args.no_atten
+            config.args.no_bottle, config.args.no_atten,
+            config.args.dropout_rate
         ).cuda()
     elif config.args.net_type == 'resnet':
         net = ResidualNet(

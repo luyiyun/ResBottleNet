@@ -125,6 +125,10 @@ class Config:
             '--no_atten', action='store_true',
             help="当使用此参数时，此参数为true，送入no_atten参数，即没有attention"
         )
+        self.parser.add_argument(
+            '--dropout_rate', default=0.0, type=float,
+            help="bottle层使用的dropout的率，默认是0.0"
+        )
 
     def loss_config(self):
         self.parser.add_argument(

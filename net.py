@@ -6,7 +6,10 @@ import torch.nn.functional as F
 ''' 这一部分主要是关于SelfAttentionNet的部分 '''
 
 
-def bottle_linear(in_f, out_f, bottle_f, act=nn.LeakyReLU(), linear=False):
+def bottle_linear(
+    in_f, out_f, bottle_f, act=nn.LeakyReLU(), linear=False,
+    dropout=0.0
+):
     '''
     得到一个bottle neck layer, linear参数如果是True这是普通的linear层，
     此主要用于进行比较；
@@ -14,7 +17,9 @@ def bottle_linear(in_f, out_f, bottle_f, act=nn.LeakyReLU(), linear=False):
     if linear:
         return nn.Linear(in_f, out_f)
     return nn.Sequential(
-        nn.Linear(in_f, bottle_f), act, nn.Linear(bottle_f, out_f))
+        nn.Linear(in_f, bottle_f), act, nn.Dropout(dropout, inplace=True),
+        nn.Linear(bottle_f, out_f)
+    )
 
 
 class AttentionBlock(nn.Module):
@@ -26,14 +31,14 @@ class AttentionBlock(nn.Module):
     '''
     def __init__(
         self, input_shape, bottle_unit, bottle_act=nn.LeakyReLU(),
-        residual=True, linear=False
+        residual=True, linear=False, dropout=0.0
     ):
         super(AttentionBlock, self).__init__()
         self.residual = residual
         self.query = bottle_linear(
-            input_shape, input_shape, bottle_unit, bottle_act, linear)
+            input_shape, input_shape, bottle_unit, bottle_act, linear, dropout)
         self.key = bottle_linear(
-            input_shape, input_shape, bottle_unit, bottle_act, linear)
+            input_shape, input_shape, bottle_unit, bottle_act, linear, dropout)
         self.bn = nn.BatchNorm1d(input_shape)
 
     def forward(self, x):
@@ -65,18 +70,18 @@ class AttenLinearBlock(nn.Module):
     '''
     def __init__(
         self, in_num, bottle_num, bottle_act=nn.LeakyReLU(), residual=True,
-        linear=False, no_atten=False
+        linear=False, no_atten=False, dropout=0.0
     ):
         super(AttenLinearBlock, self).__init__()
         self.residual = residual
         if no_atten:
             self.attention = bottle_linear(
-                in_num, in_num, bottle_num, bottle_act, linear)
+                in_num, in_num, bottle_num, bottle_act, linear, dropout)
         else:
             self.attention = AttentionBlock(
-                in_num, bottle_num, bottle_act, residual, linear)
+                in_num, bottle_num, bottle_act, residual, linear, dropout)
         self.linear = bottle_linear(
-            in_num, in_num, bottle_num, bottle_act, linear)
+            in_num, in_num, bottle_num, bottle_act, linear, dropout)
         self.bn = nn.BatchNorm1d(in_num)
 
     def forward(self, x):
@@ -96,7 +101,7 @@ class SelfAttentionNet(nn.Module):
     def __init__(
         self, input_shape, out_shape, hidden_num=500, bottle_num=50,
         block_num=3, residual=True, act=nn.LeakyReLU(), head_bool=True,
-        linear=False, no_atten=False
+        linear=False, no_atten=False, dropout=0.0
     ):
         '''
         input_shape,out_shape:输入和输出的维度；
@@ -118,7 +123,8 @@ class SelfAttentionNet(nn.Module):
             models = []
         models += [
             AttenLinearBlock(
-                hidden_num, bottle_num, act, residual, linear, no_atten
+                hidden_num, bottle_num, act, residual, linear, no_atten,
+                dropout
             ) for _ in range(block_num)
         ]
         models.append(nn.Linear(hidden_num, out_shape))
