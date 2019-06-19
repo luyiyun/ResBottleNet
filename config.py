@@ -33,6 +33,7 @@ class Config:
         self.preprocessing_config()  # 预处理的配置
         self.train_config()  # 训练相关配置
         self.net_config()  # attention net相关配置
+        self.loss_config()
 
         self.args = self.parser.parse_args()
         localtime = time.strftime("%Y-%m-%d_%H=%M", time.localtime())
@@ -83,17 +84,13 @@ class Config:
             help="learning rate, default 0.01"
         )
         self.parser.add_argument(
-            '-l2', default=0.0005, type=float,
-            help="l2正则化的系数，默认是0.0005"
-        )
-        self.parser.add_argument(
             '-smi', '--standard_metric_index', type=int, default=2,
             help="用于选择最好模型的metric的编号，默认是2，即balanced acc"
         )
 
     def net_config(self):
         self.parser.add_argument(
-            '--net_type', default='atten',
+            '--net_type', default='atten', choices=['atten', 'mlp', 'resnet'],
             help="使用的网络类型，默认是atten，还可以是mlp或resnet"
         )
         self.parser.add_argument(
@@ -127,6 +124,20 @@ class Config:
         self.parser.add_argument(
             '--no_atten', action='store_true',
             help="当使用此参数时，此参数为true，送入no_atten参数，即没有attention"
+        )
+
+    def loss_config(self):
+        self.parser.add_argument(
+            '--loss_type', default='cox', choices=['cox', 'svm'],
+            help="loss的类型，为cox或svm，默认是cox"
+        )
+        self.parser.add_argument(
+            '--svm_rankratio', default=1.0, type=float,
+            help="当选择svm loss的时候，其rank loss所占的比例，默认是1，必须是0-1"
+        )
+        self.parser.add_argument(
+            '-l2', default=0.0005, type=float,
+            help="l2正则化的系数，默认是0.0005"
         )
 
     def save(self, fn):

@@ -10,7 +10,8 @@ import pandas as pd
 
 from datasets import RnaData
 import transfers as tf
-from net import SelfAttentionNet, MLP, ResidualNet, NegativeLogLikelihood
+from net import (
+    SelfAttentionNet, MLP, ResidualNet, NegativeLogLikelihood, SvmLoss)
 import metrics as mm
 from config import config
 
@@ -151,7 +152,10 @@ def main():
             rna = RnaData.survival_data(
                 config.pan_cli, config.pan_rna, '_OS_IND', '_OS')
         out_shape = 1
-        criterion = NegativeLogLikelihood()
+        if config.args.loss_type == 'cox':
+            criterion = NegativeLogLikelihood()
+        elif config.args.loss_type == 'svm':
+            criterion = SvmLoss(rank_ratio=config.args.svm_rankratio)
         scorings = (mm.Loss(), mm.CIndex())
     rna.transform(tf.ZeroFilterCol(0.8))
     rna.transform(tf.MeanFilterCol(1))
