@@ -1,8 +1,10 @@
 import os
 import sys
+import json
 
 import numpy as np
 import pandas as pd
+import seaborn as sns
 import matplotlib.pyplot as plt
 import argparse
 
@@ -54,36 +56,80 @@ def process_dl_result(fn, indx=None):
     return use_dat
 
 
+def get_config(d, *config_names):
+    with open(os.path.join(d, 'config.json'), 'r') as f:
+        f_content = json.load(f)
+        res = [str(f_content[cn]) for cn in config_names]
+    return res
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-ds', '--dirs', nargs='+')
-    parser.add_argument('-di', '--dl_index', nargs='+')
+    parser.add_argument(
+        '-ds', '--dirs', nargs='+', default=None,
+        help="需要图像化的文件夹名称，可以多个"
+    )
+    parser.add_argument(
+        '-di', '--dl_index', default='block_num',
+        help=(
+            "对于深度学习的方法起使用的后缀，来自config，默认是block_num"
+        )
+    )
+    parser.add_argument(
+        '-dsf', '--dirs_file', default=None,
+        help="是ds参数组成的txt文件，如果要输入的ds比较多的时候使用"
+    )
+    parser.add_argument(
+        '-fs', '--fig_size', default=(5, 5), nargs=2, type=int,
+        help="画图的大小，默认是5x5"
+    )
+    parser.add_argument(
+        '-dc', '--dl_config', default=None, nargs="+",
+        help=(
+            "要加入的比较的config，默认None，可以写多个，这个在"
+            "图像中使用不同颜色来表现"
+        )
+    )
     args = parser.parse_args()
+    if args.dirs_file is not None:
+        # 读取txt文件，没一行是一次训练保存结果的文件夹，最后可能有换行符
+        with open(args.dirs_file, 'r') as f:
+            use_dirs = f.readlines()
+            use_dirs = [s.strip('\n') for s in use_dirs]
+    else:
+        use_dirs = args.dirs
     reses = []
-    for d, i in zip(args.dirs, args.dl_index):
+    for d in use_dirs:
         for fn in os.listdir(d):
             if fn == 'ml_train.csv':
                 res = process_ml_result(os.path.join(d, fn))
-                reses.append(res)
+                res['config'] = "ML_no_config"
             elif fn == 'test.csv':
-                res = process_dltest_result(os.path.join(d, fn), i)
-                reses.append(res)
+                # 把所有要用的配置都取出
+                configs = [args.dl_index]
+                if args.dl_config is not None:
+                    configs += list(args.dl_config)
+                configs = get_config(d, *configs)
+                # 后面的配置用于展现在color上
+                config_value = '-'.join(configs[1:])
+                # 第一个配置的数字用于跟在dl后作为x轴
+                res = process_dltest_result(os.path.join(d, fn), configs[0])
+                res['config'] = config_value
+            reses.append(res)
     reses = pd.concat(reses)
 
     # 画图
     sts = reses.score_type.unique()
 
-    fig, axes = plt.subplots(ncols=len(sts), figsize=(5, 5))
+    fig, axes = plt.subplots(ncols=len(sts), figsize=args.fig_size)
     for i, st in enumerate(sts):
         if isinstance(axes, np.ndarray):
             ax = axes[i]
         else:
             ax = axes
         subdf = reses.loc[reses.score_type == st]
-        subdf.boxplot(
-            column='score_value', by='classifier',
-            ax=ax
-        )
+        sns.boxplot(
+            'classifier', 'score_value', hue="config", data=subdf, ax=ax)
         ax.set_title(st)
         for tick in ax.get_xticklabels():
             tick.set_rotation(25)
