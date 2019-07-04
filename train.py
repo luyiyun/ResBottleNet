@@ -13,19 +13,11 @@ import transfers as tf
 from net import (
     SelfAttentionNet, MLP, ResidualNet, NegativeLogLikelihood, SvmLoss)
 import metrics as mm
-from config import config
-
-
-class NoneScheduler:
-    def __init__(self):
-        pass
-
-    def step(self):
-        pass
+from config import config, NoneScheduler
 
 
 def train(
-    model, criterion, optimizer, dataloaders, scheduler=NoneScheduler(),
+    model, criterion, optimizer, dataloaders, scheduler=NoneScheduler(None),
     epoch=100, device=torch.device('cuda:0'), l2=0.0,
     metrics=(mm.Loss(), mm.Accuracy()), standard_metric_index=1,
     clip_grad=False
@@ -183,7 +175,6 @@ def main():
             inpt_shape, out_shape, config.args.hidden_num,
             config.args.bottle_num, config.args.block_num
         ).cuda()
-    optimizer = optim.Adamax(net.parameters(), lr=config.args.learning_rate)
 
     # ----- 训练网络，cross validation -----
     split_iterator = rna.split_cv(
@@ -211,10 +202,13 @@ def main():
         # 网络训练前都进行一次参数重置，避免之前的训练的影响
         net.reset_parameters()
         # train
+        optimizer = optim.Adamax(net.parameters(), lr=config.args.learning_rate)
+        lrs = config.lrs(optimizer)
         net, hist = train(
             net, criterion, optimizer, dataloaders, epoch=config.args.epoch,
             metrics=scorings, l2=config.args.l2,
-            standard_metric_index=config.args.standard_metric_index
+            standard_metric_index=config.args.standard_metric_index,
+            scheduler=lrs
         )
         # test
         test_res = evaluate(net, criterion, test_dataloader, metrics=scorings)

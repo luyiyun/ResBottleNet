@@ -4,13 +4,22 @@ import time
 
 import argparse
 import torch.nn as nn
+import torch.optim as optim
+
+
+class NoneScheduler:
+    def __init__(self, optimizer):
+        pass
+
+    def step(self):
+        pass
 
 
 class Config:
-    brca_root = "E:/Python/code_genomics/pytorch/Attention/DATA/BRCA"
+    brca_root = "/home/dl/code/RongZhiWei/ResBottleNet/DATA/BRCA"
     brca_cli = os.path.join(brca_root, 'BRCA_clinicalMatrix')
     brca_rna = os.path.join(brca_root, 'HiSeqV2')
-    pan_root = "E:/Python/code_genomics/pytorch/Attention/DATA/Pan"
+    pan_root = "/home/dl/code/RongZhiWei/ResBottleNet/DATA/BRCA"
     pan_cli = os.path.join(pan_root, 'PANCAN_clinicalMatrix')
     pan_rna = os.path.join(pan_root, 'HiSeqV2')
 
@@ -26,6 +35,13 @@ class Config:
         'leaky_relu': nn.LeakyReLU(),
         'tanh': nn.Tanh()
     }
+
+    schedulers = {
+        'None': NoneScheduler,
+        'Exp': lambda optimizer: optim.lr_scheduler.ExponentialLR(
+            optimizer, 0.95)
+    }
+
 
     def __init__(self,):
         self.parser = argparse.ArgumentParser()
@@ -45,6 +61,7 @@ class Config:
         self.save(os.path.join(self.save_dir, 'config.json'))
 
         self.act = self.acts[self.args.act]
+        self.lrs = self.schedulers[self.args.lr_scheduler]
 
     def preprocessing_config(self):
         self.parser.add_argument(
@@ -86,6 +103,10 @@ class Config:
         self.parser.add_argument(
             '-smi', '--standard_metric_index', type=int, default=2,
             help="用于选择最好模型的metric的编号，默认是2，即balanced acc"
+        )
+        self.parser.add_argument(
+            '-lrs', '--lr_scheduler', default='None',
+            help="学习率变化策略，默认是None"
         )
 
     def net_config(self):

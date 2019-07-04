@@ -121,19 +121,20 @@ def main():
     # 画图
     sts = reses.score_type.unique()
 
-    fig, axes = plt.subplots(ncols=len(sts), figsize=args.fig_size)
+    # fig, axes = plt.subplots(nrows=len(sts), figsize=args.fig_size)
     for i, st in enumerate(sts):
-        if isinstance(axes, np.ndarray):
-            ax = axes[i]
-        else:
-            ax = axes
+        ax = plt.subplot(
+        # if isinstance(axes, np.ndarray):
+        #     ax = axes[i]
+        # else:
+        #     ax = axes
         subdf = reses.loc[reses.score_type == st]
         sns.boxplot(
             'classifier', 'score_value', hue="config", data=subdf, ax=ax)
         ax.set_title(st)
         for tick in ax.get_xticklabels():
             tick.set_rotation(25)
-    plt.show()
+        plt.show()
 
 
 if __name__ == "__main__":
